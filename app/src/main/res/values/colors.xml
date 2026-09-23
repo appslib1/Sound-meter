@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Brand color pulled straight from the app icon background. -->
+    <color name="brand_teal">#FF0B4F58</color>
+
+    <!-- LIGHT palette (default; dark variants live in values-night/colors.xml). -->
+    <color name="bg_root">#FFEFF5F6</color>
+    <color name="bg_card">#FFFFFFFF</color>
+    <color name="bg_card_stroke">#FFDFE7E9</color>
+
+    <color name="text_primary">#FF11151C</color>
+    <color name="text_secondary">#FF525A66</color>
+    <color name="text_tertiary">#FF8B93A0</color>
+
+    <color name="level_low">#FF16A34A</color>
+    <color name="level_moderate">#FFCA8A04</color>
+    <color name="level_high">#FFEA580C</color>
+    <color name="level_extreme">#FFDC2626</color>
+
+    <color name="chart_line">#FF0891B2</color>
+    <color name="chart_fill">#330891B2</color>
+    <color name="chart_grid">#FFE4E7EB</color>
+
+    <color name="btn_control_bg">#FFF1F3F5</color>
+    <color name="btn_primary_bg">#FF06B6D4</color>
+
+    <!-- Rating modal (theme-independent face + star tokens) -->
+    <color name="rating_red">#FFF5222D</color>
+    <color name="rating_amber">#FFFBBC04</color>
+    <color name="rating_star_empty">#FFDDDDDD</color>
+    <color name="rating_button_disabled">#FFB3D2E5</color>
+    <color name="face_red">#FFF0555B</color>
+    <color name="face_yellow">#FFFCC934</color>
+    <color name="face_feature">#FF3C4043</color>
+    <color name="face_heart">#FFEA3B4E</color>
+</resources>

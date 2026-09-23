@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg_root">#FF0A2226</color>
+    <color name="bg_card">#FF153036</color>
+    <color name="bg_card_stroke">#FF1F4148</color>
+
+    <color name="text_primary">#FFF2F4F8</color>
+    <color name="text_secondary">#FFA8B0BA</color>
+    <color name="text_tertiary">#FF6C7280</color>
+
+    <color name="level_low">#FF4CD97B</color>
+    <color name="level_moderate">#FFFFD24C</color>
+    <color name="level_high">#FFFF8A3D</color>
+    <color name="level_extreme">#FFFF4C61</color>
+
+    <color name="chart_line">#FF4CD9C1</color>
+    <color name="chart_fill">#334CD9C1</color>
+    <color name="chart_grid">#FF262B34</color>
+
+    <color name="btn_control_bg">#FF20252F</color>
+    <color name="btn_primary_bg">#FF4CD9C1</color>
+</resources>
