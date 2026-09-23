@@ -3,8 +3,10 @@ package com.soundmeter.decibel.noisedetector;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageButton;
@@ -27,7 +29,9 @@ import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -38,6 +42,7 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     private ArcGaugeView gauge;
     private TextView dbValue, dbUnitLabel;
     private TextView statMinValue, statAvgValue, statMaxValue;
+    private TextView permissionCta;
     private ImageButton btnPauseResume, btnReset, btnSettings, btnReference;
     private LineChart chart;
     private LineDataSet dataSet;
@@ -49,8 +54,11 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     // All internal state is kept in dB. Display converts using currentUnit.factor.
     private double minDb = Double.POSITIVE_INFINITY;
     private double maxDb = Double.NEGATIVE_INFINITY;
-    private double sumDb = 0.0;
-    private long sampleCount = 0;
+    // Rolling AVG over the last CHART_WINDOW_POINTS samples (~60s). A lifetime running mean
+    // stops being informative after a few minutes because early samples dominate — users
+    // expect "AVG" to reflect the current environment, not the entire session.
+    private final ArrayDeque<Double> avgWindow = new ArrayDeque<>();
+    private double avgWindowSum = 0.0;
     private int xIndex = 0;
     private double lastDb = Double.NaN;
 
@@ -59,12 +67,12 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     private final ActivityResultLauncher<String> micPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
+                    hidePermissionCta();
                     startMeter();
                 } else {
-                    // Show as paused; tapping play will re-request the permission.
                     paused = true;
                     showPlayIcon();
-                    Toast.makeText(this, R.string.perm_mic_denied, Toast.LENGTH_LONG).show();
+                    showPermissionCta();
                 }
             });
 
@@ -94,11 +102,14 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
         gauge = findViewById(R.id.gauge);
         dbValue = findViewById(R.id.dbValue);
         dbUnitLabel = findViewById(R.id.dbUnit);
+        permissionCta = findViewById(R.id.permissionCta);
         chart = findViewById(R.id.chart);
         btnPauseResume = findViewById(R.id.btnPauseResume);
         btnReset = findViewById(R.id.btnReset);
         btnSettings = findViewById(R.id.btnSettings);
         btnReference = findViewById(R.id.btnReference);
+
+        permissionCta.setOnClickListener(v -> onPermissionCtaClicked());
 
         View minInclude = findViewById(R.id.statMin);
         View avgInclude = findViewById(R.id.statAvg);
@@ -131,6 +142,14 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
         applyKeepScreenOn(AppPrefs.isKeepScreenOn(this));
         btnReference.setVisibility(AppPrefs.isShowReference(this) ? View.VISIBLE : View.GONE);
         applyUnitIfChanged(AppPrefs.getUnit(this));
+        // Calibration may have changed in Settings — apply before starting the engine.
+        engine.setCalibrationOffset(AppPrefs.getEffectiveCalibrationOffset(this));
+
+        // If the user granted the mic while we were in the background, clear the CTA.
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
+            hidePermissionCta();
+        }
 
         if (!paused) {
             ensurePermissionAndStart();
@@ -193,10 +212,10 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     }
 
     private void rerenderCurrentStats() {
-        if (sampleCount == 0) return;
+        if (avgWindow.isEmpty()) return;
         statMinValue.setText(fmt(minDb));
         statMaxValue.setText(fmt(maxDb));
-        statAvgValue.setText(fmt(sumDb / sampleCount));
+        statAvgValue.setText(fmt(avgWindowSum / avgWindow.size()));
     }
 
     // ================== permission + engine control ==================
@@ -204,14 +223,71 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     private void ensurePermissionAndStart() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED) {
+            hidePermissionCta();
             startMeter();
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            requestMicWithRationale();
         } else {
             // Pre-M devices grant the permission at install time; if we still see DENIED here,
             // the user disabled it in system settings — nothing we can do without leaving the app.
             paused = true;
             showPlayIcon();
+            showPermissionCta();
+        }
+    }
+
+    private void requestMicWithRationale() {
+        // Only show the rationale on the very first ask — after that we let the system dialog
+        // (or our inline CTA) drive the flow so the user is not walled with dialogs.
+        if (AppPrefs.hasAskedMic(this)) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        AppPrefs.setHasAskedMic(this, true);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.perm_mic_needed_title)
+                .setMessage(R.string.perm_mic_needed_message)
+                .setCancelable(false)
+                .setNegativeButton(R.string.perm_mic_later, (d, w) -> {
+                    d.dismiss();
+                    paused = true;
+                    showPlayIcon();
+                    showPermissionCta();
+                })
+                .setPositiveButton(R.string.perm_mic_grant, (d, w) ->
+                        micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO))
+                .show();
+    }
+
+    private void showPermissionCta() {
+        if (permissionCta != null) permissionCta.setVisibility(View.VISIBLE);
+    }
+
+    private void hidePermissionCta() {
+        if (permissionCta != null) permissionCta.setVisibility(View.GONE);
+    }
+
+    private void onPermissionCtaClicked() {
+        // If the system will still show its dialog, use it; otherwise deep-link to app settings.
+        // shouldShowRequestPermissionRationale returns false when the user chose "Don't ask again"
+        // (or on Android 11+ after two denials) — those are exactly the cases where re-requesting
+        // does nothing and we must open the settings screen.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+        } else {
+            openAppSettings();
+        }
+    }
+
+    private void openAppSettings() {
+        try {
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            i.setData(Uri.fromParts("package", getPackageName(), null));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.perm_mic_denied, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -234,8 +310,8 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     private void resetStats() {
         minDb = Double.POSITIVE_INFINITY;
         maxDb = Double.NEGATIVE_INFINITY;
-        sumDb = 0.0;
-        sampleCount = 0;
+        avgWindow.clear();
+        avgWindowSum = 0.0;
         statMinValue.setText("—");
         statAvgValue.setText("—");
         statMaxValue.setText("—");
@@ -258,12 +334,17 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
 
         if (dbSpl < minDb) minDb = dbSpl;
         if (dbSpl > maxDb) maxDb = dbSpl;
-        sumDb += dbSpl;
-        sampleCount++;
+
+        avgWindow.addLast(dbSpl);
+        avgWindowSum += dbSpl;
+        while (avgWindow.size() > CHART_WINDOW_POINTS) {
+            Double dropped = avgWindow.pollFirst();
+            if (dropped != null) avgWindowSum -= dropped;
+        }
 
         statMinValue.setText(fmt(minDb));
         statMaxValue.setText(fmt(maxDb));
-        statAvgValue.setText(fmt(sumDb / sampleCount));
+        statAvgValue.setText(fmt(avgWindowSum / avgWindow.size()));
 
         dataSet.addEntry(new Entry(xIndex++, (float) displayed));
         if (dataSet.getEntryCount() > CHART_WINDOW_POINTS) {
@@ -287,8 +368,8 @@ public class MainActivity extends AppCompatActivity implements SoundMeterEngine.
     private String fmt(double dbValue) {
         double v = dbValue * currentUnit.factor;
         return currentUnit == AppPrefs.Unit.DB
-                ? String.format(Locale.US, "%.0f", v)
-                : String.format(Locale.US, "%.1f", v);
+                ? String.format(Locale.getDefault(), "%.0f", v)
+                : String.format(Locale.getDefault(), "%.1f", v);
     }
 
     private int colorForDb(double db) {

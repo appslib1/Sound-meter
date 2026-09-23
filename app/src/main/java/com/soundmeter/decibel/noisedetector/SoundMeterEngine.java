@@ -38,6 +38,12 @@ public final class SoundMeterEngine {
     private static final double MIN_DB = 20.0;
     private static final double MAX_DB = 140.0;
 
+    // The first few AudioRecord.read() calls after startRecording() often return
+    // uninitialized buffer contents that decode to spuriously high dB values —
+    // in a silent room the meter would briefly show 50–60 dB before settling.
+    // Discarding a few windows avoids that "app is broken" first impression.
+    private static final int WARMUP_WINDOWS_TO_SKIP = 4;
+
     private final Listener listener;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private HandlerThread audioThread;
@@ -119,6 +125,7 @@ public final class SoundMeterEngine {
         }
 
         short[] buffer = new short[windowSamples];
+        int warmupSkip = WARMUP_WINDOWS_TO_SKIP;
         while (running) {
             int read = recorder.read(buffer, 0, buffer.length);
             if (read <= 0) {
@@ -127,6 +134,11 @@ public final class SoundMeterEngine {
                     postError("Audio read failed.");
                     break;
                 }
+                continue;
+            }
+
+            if (warmupSkip > 0) {
+                warmupSkip--;
                 continue;
             }
 

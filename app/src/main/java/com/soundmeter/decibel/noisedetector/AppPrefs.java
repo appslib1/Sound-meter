@@ -13,6 +13,15 @@ public final class AppPrefs {
     private static final String KEY_UNIT = "unit";
     private static final String KEY_SHOW_REFERENCE = "show_reference_btn";
     private static final String KEY_THEME = "theme";
+    private static final String KEY_CAL_DELTA = "cal_offset_delta";
+    private static final String KEY_HAS_ASKED_MIC = "has_asked_mic";
+
+    // Calibration is applied to the engine as `100 + delta` dB. Storing the delta
+    // (instead of the absolute offset) keeps the "Reset" affordance trivial and the
+    // slider range user-friendly.
+    public static final int CAL_MIN_DELTA = -20;
+    public static final int CAL_MAX_DELTA = 20;
+    private static final double CAL_BASE = 100.0;
 
     public enum Unit {
         DB("dB SPL", 1.0),
@@ -98,5 +107,34 @@ public final class AppPrefs {
     /** Apply saved theme without persisting — call at Application/Activity boot. */
     public static void applySavedTheme(Context ctx) {
         AppCompatDelegate.setDefaultNightMode(getTheme(ctx).nightMode);
+    }
+
+    // ================== Calibration ==================
+
+    public static int getCalibrationDelta(Context ctx) {
+        int d = prefs(ctx).getInt(KEY_CAL_DELTA, 0);
+        if (d < CAL_MIN_DELTA) return CAL_MIN_DELTA;
+        if (d > CAL_MAX_DELTA) return CAL_MAX_DELTA;
+        return d;
+    }
+
+    public static void setCalibrationDelta(Context ctx, int delta) {
+        if (delta < CAL_MIN_DELTA) delta = CAL_MIN_DELTA;
+        if (delta > CAL_MAX_DELTA) delta = CAL_MAX_DELTA;
+        prefs(ctx).edit().putInt(KEY_CAL_DELTA, delta).apply();
+    }
+
+    public static double getEffectiveCalibrationOffset(Context ctx) {
+        return CAL_BASE + getCalibrationDelta(ctx);
+    }
+
+    // ================== Permission ask tracking ==================
+
+    public static boolean hasAskedMic(Context ctx) {
+        return prefs(ctx).getBoolean(KEY_HAS_ASKED_MIC, false);
+    }
+
+    public static void setHasAskedMic(Context ctx, boolean value) {
+        prefs(ctx).edit().putBoolean(KEY_HAS_ASKED_MIC, value).apply();
     }
 }

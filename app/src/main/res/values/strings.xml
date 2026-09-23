@@ -3,7 +3,7 @@
 
     <string name="db_unit">dB SPL</string>
     <string name="stat_min">MIN</string>
-    <string name="stat_avg">AVG</string>
+    <string name="stat_avg">AVG (60s)</string>
     <string name="stat_max">MAX</string>
     <string name="chart_x_axis_label">Last 60s</string>
 
@@ -16,6 +16,8 @@
     <string name="perm_mic_needed_message">Sound Meter needs the microphone to measure sound levels around you. No audio is recorded or sent anywhere.</string>
     <string name="perm_mic_grant">Grant permission</string>
     <string name="perm_mic_denied">Permission denied. Enable it in system settings to use the meter.</string>
+    <string name="perm_mic_cta">Tap to grant microphone access</string>
+    <string name="perm_mic_later">Not now</string>
 
     <string name="a11y_gauge">Sound level gauge</string>
     <string name="a11y_pause_resume">Pause or resume measurement</string>
@@ -44,6 +46,14 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_system">System</string>
+
+    <string name="settings_sound_header">Sound</string>
+    <string name="settings_calibration">Calibration</string>
+    <string name="settings_calibration_sub">Adjust so readings match a reference meter. Increase to see higher dB values.</string>
+    <string name="settings_calibration_value_positive">+%1$d dB</string>
+    <string name="settings_calibration_value_negative">%1$d dB</string>
+    <string name="settings_calibration_value_zero">0 dB</string>
+    <string name="settings_calibration_reset">Reset</string>
 
     <string name="settings_share_header">Share</string>
     <string name="settings_rate">Rate app</string>

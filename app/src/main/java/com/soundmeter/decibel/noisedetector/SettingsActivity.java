@@ -3,6 +3,8 @@ package com.soundmeter.decibel.noisedetector;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,6 +14,7 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.slider.Slider;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -35,6 +38,7 @@ public class SettingsActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         bindDisplay();
+        bindCalibration();
         bindShare();
     }
 
@@ -83,6 +87,40 @@ public class SettingsActivity extends AppCompatActivity {
         if (id == R.id.themeLight) return AppPrefs.Theme.LIGHT;
         if (id == R.id.themeDark)  return AppPrefs.Theme.DARK;
         return AppPrefs.Theme.SYSTEM;
+    }
+
+    // ================== Calibration ==================
+
+    private void bindCalibration() {
+        Slider slider = findViewById(R.id.calibrationSlider);
+        TextView value = findViewById(R.id.calibrationValue);
+        Button reset = findViewById(R.id.btnResetCalibration);
+
+        int initial = AppPrefs.getCalibrationDelta(this);
+        slider.setValueFrom(AppPrefs.CAL_MIN_DELTA);
+        slider.setValueTo(AppPrefs.CAL_MAX_DELTA);
+        slider.setStepSize(1f);
+        slider.setValue(initial);
+        value.setText(formatCalibration(initial));
+
+        slider.addOnChangeListener((s, v, fromUser) -> {
+            int delta = Math.round(v);
+            value.setText(formatCalibration(delta));
+            if (fromUser) {
+                AppPrefs.setCalibrationDelta(this, delta);
+            }
+        });
+
+        reset.setOnClickListener(v -> {
+            slider.setValue(0);
+            AppPrefs.setCalibrationDelta(this, 0);
+        });
+    }
+
+    private String formatCalibration(int delta) {
+        if (delta == 0) return getString(R.string.settings_calibration_value_zero);
+        if (delta > 0) return getString(R.string.settings_calibration_value_positive, delta);
+        return getString(R.string.settings_calibration_value_negative, delta);
     }
 
     // ================== Share / Rate ==================

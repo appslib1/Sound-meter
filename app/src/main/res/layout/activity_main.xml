@@ -76,6 +76,25 @@
             app:layout_constraintTop_toBottomOf="@id/dbValue"
             android:layout_marginTop="-4dp" />
 
+        <TextView
+            android:id="@+id/permissionCta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="10dp"
+            android:text="@string/perm_mic_cta"
+            android:textColor="@color/level_extreme"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="@id/gauge"
+            app:layout_constraintEnd_toEndOf="@id/gauge"
+            app:layout_constraintTop_toBottomOf="@id/dbUnit"
+            android:layout_marginTop="8dp" />
+
         <LinearLayout
             android:id="@+id/statsRow"
             android:layout_width="match_parent"
