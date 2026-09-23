@@ -18,11 +18,12 @@
 
     <TextView
         android:id="@+id/rowDb"
-        android:layout_width="72dp"
+        android:layout_width="88dp"
         android:layout_height="wrap_content"
         android:paddingStart="6dp"
         android:paddingEnd="12dp"
         android:fontFamily="monospace"
+        android:maxLines="1"
         android:textColor="@color/text_primary"
         android:textSize="16sp"
         android:textStyle="bold"
